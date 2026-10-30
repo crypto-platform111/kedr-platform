@@ -1,0 +1,8 @@
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["."]
+addopts = "-ra"
+[tool.ruff]
+line-length = 120
+[tool.ruff.lint]
+select = ["E9", "F63", "F7", "F82"]

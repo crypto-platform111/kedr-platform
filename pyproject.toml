@@ -1,3 +1,29 @@
+[build-system]
+requires = ["setuptools==84.2.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kedr-platform"
+version = "0.2.0"
+requires-python = ">=3.13,<3.14"
+dynamic = ["dependencies"]
+
+[tool.setuptools.packages.find]
+include = ["backend", "backend.app"]
+namespaces = false
+
+[tool.setuptools.package-data]
+backend = ["migrations/*.sql", "postgres_migrations/*.sql"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.lock.txt"]}
+
+[tool.vercel]
+entrypoint = "backend.app.main:app"
+
+[[tool.vercel.subscribers]]
+entrypoint = "backend.app.queue_bridge"
+
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
 pythonpath = ["."]

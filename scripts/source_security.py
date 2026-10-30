@@ -14,7 +14,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 GIT = shutil.which("git") or str(ROOT / "tools/share-tools/git/cmd/git.exe")
-FORBIDDEN_PARTS = {"data", "backups", "exports", "verification", "tools", "node_modules", ".venv", "venv", ".tmp", ".cache", "__pycache__", ".pytest_cache", ".ruff_cache", "dist", "build", "test-results", "playwright-report"}
+FORBIDDEN_PARTS = {"data", "backups", "exports", "verification", "tools", "node_modules", ".venv", "venv", ".vercel", ".tmp", ".cache", "__pycache__", ".pytest_cache", ".ruff_cache", "dist", "build", "test-results", "playwright-report"}
 FORBIDDEN_SUFFIXES = {".db", ".sqlite", ".sqlite3", ".zip", ".gz", ".npy", ".npz", ".parquet", ".pkl", ".pickle", ".joblib", ".exe", ".dll", ".log", ".pem", ".key", ".pfx", ".pdf", ".docx"}
 PATTERNS = {
     "private_key": re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----"),

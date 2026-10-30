@@ -3,13 +3,13 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import os
 import secrets
 import time
 
 from fastapi import HTTPException, Request
 
 from .db import now
+from .hosting import secure_cookies
 
 COOKIE_NAME = "kedr_session"
 SESSION_SECONDS = 7 * 24 * 60 * 60
@@ -49,7 +49,7 @@ def new_session(db, user_id: str, response) -> str:
     with db.connection() as conn:
         conn.execute("DELETE FROM sessions WHERE expires_at <= ?", (int(time.time()),))
         conn.execute("INSERT INTO sessions VALUES (?,?,?,?,?)", (token_digest(token), user_id, csrf, int(time.time()) + SESSION_SECONDS, now()))
-    response.set_cookie(COOKIE_NAME, token, max_age=SESSION_SECONDS, httponly=True, secure=os.environ.get("KEDR_SECURE_COOKIES") == "1", samesite="strict", path="/")
+    response.set_cookie(COOKIE_NAME, token, max_age=SESSION_SECONDS, httponly=True, secure=secure_cookies(), samesite="strict", path="/")
     return csrf
 
 

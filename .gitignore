@@ -21,6 +21,7 @@ secrets.*
 /V02_*.md
 /.tmp/
 /.cache/
+/.vercel/
 /.vscode/
 /.idea/
 node_modules/

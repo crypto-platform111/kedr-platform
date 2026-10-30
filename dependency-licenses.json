@@ -1338,7 +1338,7 @@
     {
       "name": "colorama",
       "version": "0.4.6",
-      "declared_license": null,
+      "declared_license": "See installed package notices",
       "license_classifiers": [
         "License :: OSI Approved :: BSD License"
       ]
@@ -1372,8 +1372,28 @@
       ]
     },
     {
+      "name": "h2",
+      "version": "4.4.1",
+      "declared_license": "MIT",
+      "license_classifiers": []
+    },
+    {
+      "name": "hpack",
+      "version": "4.2.0",
+      "declared_license": "MIT",
+      "license_classifiers": []
+    },
+    {
       "name": "httpcore",
       "version": "1.0.9",
+      "declared_license": "BSD-3-Clause",
+      "license_classifiers": [
+        "License :: OSI Approved :: BSD License"
+      ]
+    },
+    {
+      "name": "httpcore2",
+      "version": "2.16.0",
       "declared_license": "BSD-3-Clause",
       "license_classifiers": [
         "License :: OSI Approved :: BSD License"
@@ -1385,6 +1405,22 @@
       "declared_license": "BSD-3-Clause",
       "license_classifiers": [
         "License :: OSI Approved :: BSD License"
+      ]
+    },
+    {
+      "name": "httpx2",
+      "version": "2.16.0",
+      "declared_license": "BSD-3-Clause",
+      "license_classifiers": [
+        "License :: OSI Approved :: BSD License"
+      ]
+    },
+    {
+      "name": "hyperframe",
+      "version": "6.1.0",
+      "declared_license": "The MIT License (MIT)\n\nCopyright (c) 2014 Cory Benfield\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE.\n",
+      "license_classifiers": [
+        "License :: OSI Approved :: MIT License"
       ]
     },
     {
@@ -1420,6 +1456,18 @@
       ]
     },
     {
+      "name": "psycopg",
+      "version": "3.3.6",
+      "declared_license": "LGPL-3.0-only",
+      "license_classifiers": []
+    },
+    {
+      "name": "psycopg-binary",
+      "version": "3.3.6",
+      "declared_license": "LGPL-3.0-only",
+      "license_classifiers": []
+    },
+    {
       "name": "pydantic",
       "version": "2.14.1",
       "declared_license": "MIT",
@@ -1442,6 +1490,14 @@
       "version": "9.1.1",
       "declared_license": "MIT",
       "license_classifiers": []
+    },
+    {
+      "name": "python-multipart",
+      "version": "0.0.32",
+      "declared_license": "Apache-2.0",
+      "license_classifiers": [
+        "License :: OSI Approved :: Apache Software License"
+      ]
     },
     {
       "name": "ruff",
@@ -1468,6 +1524,12 @@
       "license_classifiers": []
     },
     {
+      "name": "truststore",
+      "version": "0.10.5",
+      "declared_license": "MIT",
+      "license_classifiers": []
+    },
+    {
       "name": "tzdata",
       "version": "2026.5",
       "declared_license": "Apache-2.0",
@@ -1478,6 +1540,30 @@
       "version": "0.54.0",
       "declared_license": "BSD-3-Clause",
       "license_classifiers": []
+    },
+    {
+      "name": "vercel-headers",
+      "version": "0.7.2",
+      "declared_license": "MIT",
+      "license_classifiers": []
+    },
+    {
+      "name": "vercel-internal-core",
+      "version": "0.2.2",
+      "declared_license": "MIT",
+      "license_classifiers": []
+    },
+    {
+      "name": "vercel-oidc",
+      "version": "0.10.0",
+      "declared_license": "MIT",
+      "license_classifiers": []
+    },
+    {
+      "name": "vercel-queue",
+      "version": "0.10.0",
+      "declared_license": "MIT",
+      "license_classifiers": []
     }
   ],
   "notices": {
@@ -1485,5 +1571,11 @@
     "sha256": "11520e0baab9fdf5dd3ed0e4ad72a02181539fdcbd7541b9d05af117c74a97cd",
     "bytes": 727361,
     "scope": "Public installed npm dependency license/notice texts and the Node runtime notice collected for the original installation. Runtime binaries are excluded."
+  },
+  "python_notices": {
+    "path": "PYTHON_THIRD_PARTY_NOTICES.txt",
+    "sha256": "0c5eba40d02146883ee69db7fa6694d65a237d37a312f16eb33fd9240988917e",
+    "bytes": 135836,
+    "scope": "Public license/notice text from pinned installed Python distributions only."
   }
 }

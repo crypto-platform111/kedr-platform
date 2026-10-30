@@ -4,9 +4,11 @@ KEDR is a Russian-first, English-capable strategy research application. Version 
 
 The application runs locally without exchange credentials, paid services or new market downloads. Historical simulations and chronological ML tests remain retrospective research, not independently validated forecasts or verified executable returns.
 
+Vercel Services uses the confirmed two-service layout, optional shared PostgreSQL storage and durable Vercel Queues. See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) for cloud resource setup, plan requirements, recovery limits and verification. Local SQLite remains the default; no cloud deployment or personal-data migration is implied.
+
 ## Windows setup for a fresh clone
 
-Install Git for Windows, **Python 3.13** with the Windows `py` launcher, and **Node.js 24 LTS** with npm. Open a new PowerShell window and check `py -3.13 --version`, `node --version` and `npm.cmd --version`. Microsoft Edge is needed only for optional browser tests. The organization administrator must grant your GitHub account access to this private repository before cloning.
+Install Git for Windows, **Python 3.13** with the Windows `py` launcher, and **Node.js 24 LTS** with npm. Open a new PowerShell window and check `py -3.13 --version`, `node --version` and `npm.cmd --version`. Microsoft Edge is needed only for optional browser tests. The repository is public; an organization administrator must grant write access before a collaborator can push directly.
 
 ~~~powershell
 git clone https://github.com/crypto-platform111/kedr-platform.git

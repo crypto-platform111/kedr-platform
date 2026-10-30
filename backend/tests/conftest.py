@@ -9,6 +9,11 @@ import pytest
 # even when a developer's shell points KEDR_DATA_DIR at their real installation.
 _default_app_directory = tempfile.TemporaryDirectory(prefix="kedr-test-app-")
 os.environ["KEDR_DATA_DIR"] = _default_app_directory.name
+# Ordinary tests must never connect to a developer's hosted database or queue.
+# Dedicated PostgreSQL cases use KEDR_TEST_POSTGRES_URL and explicit constructors.
+os.environ.pop("KEDR_DATABASE_URL", None)
+os.environ.pop("DATABASE_URL", None)
+os.environ.pop("KEDR_JOB_MODE", None)
 
 
 def pytest_configure(config):

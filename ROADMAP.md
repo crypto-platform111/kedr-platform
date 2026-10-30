@@ -2,6 +2,8 @@
 
 Version 0.2 connects blank/guided/visual creation, a broader OHLCV DSL, historical financial charts, real decision traces, bounded comparisons, real local ML examples and an optional consent-gated AI adapter. Existing research and version-1 runs remain protected. The items below are remaining work, not activated services.
 
+Hosted PostgreSQL persistence and Vercel Queues execution are now implemented alongside the unchanged local SQLite/worker defaults. See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) for the confirmed service layout, resource provisioning and deployment verification; implementation does not imply an already provisioned or production-verified cloud platform.
+
 ## Next local product work
 
 - Improve the guided builder beyond its bounded MA/RSI family while retaining the same typed graph and preview semantics.
@@ -28,9 +30,9 @@ Any prospective information test needs a separately frozen meaningful effect/pre
 
 ## Before access from other machines
 
-Replace development/preview servers with TLS/reverse proxy/supervision; harden origin/host/CSP/cookies, identity recovery/MFA and abuse limits. Add durable workers/leases/retries, cross-process admission and hard process limits for general computation. ML currently has a supervised subprocess; backtest/scenario threads are not a distributed sandbox.
+Use the documented Vercel Services mode or replace development/preview servers with TLS/reverse proxy/supervision. Verify deployed origin/host/cookie behavior and harden CSP, identity recovery/MFA and abuse limits. Hosted mode already implements durable queue leases/retries, shared admission and authentication throttling. Remaining work includes operational recovery testing and hard process limits for general computation. ML has a supervised subprocess; backtest/scenario computation is not a hostile-code sandbox.
 
-Test backup/restore, disk quotas/retention, operational monitoring/privacy/moderation, secret handling and incident response. Review data licenses/redistribution and deployment security. PostgreSQL remains a scaling option, not a requirement for the local release.
+Test backup/restore, disk quotas/retention, operational monitoring/privacy/moderation, secret handling and incident response. Review data licenses/redistribution and deployment security. PostgreSQL is required for hosted durable mode and remains optional for local use. Verify the real deployed queue/database flow before accepting hosted traffic; a local listener alone is insufficient.
 
 ## Deliberately separate products
 

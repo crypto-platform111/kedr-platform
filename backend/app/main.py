@@ -7,6 +7,7 @@ from datetime import date
 from hashlib import sha256
 from pathlib import Path
 import json
+import hmac
 import logging
 import os
 import re
@@ -26,6 +27,9 @@ from .auth import COOKIE_NAME, current_identity, current_user, new_session, pass
 from .db import Database, encode, identifier, now
 from .contracts import GenerationRequest
 from .providers import news_fixture, provider_statuses
+from .hosting import allowed_hosts, allowed_origins, configured_database_url, vercel_cloud
+from .hosted_response import HostedJSONResponse
+from starlette.responses import JSONResponse
 
 log = logging.getLogger("kedr.api")
 BASE = Path(__file__).resolve().parents[2]
@@ -306,34 +310,47 @@ class LocalJobs:
 
 
 def create_app(data_dir: str | Path | None = None) -> FastAPI:
-    db = Database(data_dir or os.environ.get("KEDR_DATA_DIR", BASE / "data"))
+    cloud = vercel_cloud()
+    database_url = configured_database_url()
+    if cloud and not database_url:
+        raise RuntimeError("Vercel hosting requires KEDR_DATABASE_URL for shared PostgreSQL storage; ephemeral SQLite is disabled.")
+    db = Database(data_dir or os.environ.get("KEDR_DATA_DIR", BASE / "data"), database_url=database_url)
+    job_mode = os.environ.get("KEDR_JOB_MODE", "durable" if db.backend == "postgresql" else "local")
+    if job_mode not in ("local", "durable") or (job_mode == "durable" and db.backend != "postgresql") or (cloud and job_mode != "durable"):
+        raise RuntimeError("Hosted jobs require durable mode with shared PostgreSQL; local mode is only for local development.")
     db.initialize()
 
     @asynccontextmanager
     async def lifespan(app):
-        with db.connection() as conn:
-            conn.execute("UPDATE jobs SET status='failed',error='Server restarted before completion; submit a new run.',finished_at=? WHERE status IN ('queued','running')", (now(),))
-            conn.execute("UPDATE research_jobs SET status='failed',error='Server restarted; no unfinished model artifact was registered.',finished_at=? WHERE status IN ('queued','running')", (now(),))
-        app.state.jobs = LocalJobs(db)
-        app.state.research_jobs = research.ResearchJobs(db)
+        if job_mode == "durable":
+            from .durable_jobs import DurableJobs
+            app.state.jobs = DurableJobs(db)
+            app.state.research_jobs = research.HostedResearchJobs(db, app.state.jobs)
+        else:
+            with db.connection() as conn:
+                conn.execute("UPDATE jobs SET status='failed',error='Server restarted before completion; submit a new run.',finished_at=? WHERE status IN ('queued','running')", (now(),))
+                conn.execute("UPDATE research_jobs SET status='failed',error='Server restarted; no unfinished model artifact was registered.',finished_at=? WHERE status IN ('queued','running')", (now(),))
+            app.state.jobs = LocalJobs(db)
+            app.state.research_jobs = research.ResearchJobs(db)
         yield
         app.state.research_jobs.close()
         app.state.jobs.close()
 
-    app = FastAPI(title="KEDR Research API", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="KEDR Research API", version="0.2.0", lifespan=lifespan,
+                  default_response_class=HostedJSONResponse if cloud else JSONResponse)
     app.state.db = db
+    app.state.job_mode = job_mode
     app.state.auth_attempts = {}
     app.state.auth_lock = threading.Lock()
-    allowed_hosts = ["127.0.0.1", "localhost", "testserver"]
-    allowed_hosts.extend(value.strip() for value in os.environ.get("KEDR_ALLOWED_HOSTS", "").split(",") if value.strip())
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(dict.fromkeys(allowed_hosts)))
-    app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], allow_credentials=True, allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"], allow_headers=["Content-Type", "X-CSRF-Token"])
+    trusted_origins = allowed_origins()
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts())
+    app.add_middleware(CORSMiddleware, allow_origins=trusted_origins, allow_credentials=True, allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"], allow_headers=["Content-Type", "X-CSRF-Token"])
 
     @app.middleware("http")
     async def guard_requests(request: Request, call_next):
         if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
             origin = request.headers.get("origin")
-            allowed = {f"{request.url.scheme}://{request.url.netloc}", "http://localhost:5173", "http://127.0.0.1:5173"}
+            allowed = {f"{request.url.scheme}://{request.url.netloc}", *trusted_origins}
             if origin and origin not in allowed:
                 from fastapi.responses import JSONResponse
                 return JSONResponse({"detail": "Cross-origin mutation rejected"}, status_code=403)
@@ -360,6 +377,10 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
 
     def auth_rate_limit(request):
         key = request.client.host if request.client else "local"
+        if db.backend == "postgresql":
+            if not db.record_auth_attempt(key):
+                raise HTTPException(429, "Too many authentication attempts; wait five minutes")
+            return
         clock = time.monotonic()
         with app.state.auth_lock:
             attempts = [stamp for stamp in app.state.auth_attempts.get(key, []) if stamp > clock - 300]
@@ -371,7 +392,18 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "application": "KEDR", "mode": "local_research", "version": "0.2.0", "execution_enabled": False}
+        return {"status": "ok", "application": "KEDR", "mode": "hosted_research" if job_mode == "durable" else "local_research", "version": "0.2.0", "execution_enabled": False, "storage": db.backend, "job_mode": job_mode}
+
+    @app.get("/api/internal/dispatch", include_in_schema=False)
+    async def dispatch(request: Request):
+        secret = os.environ.get("CRON_SECRET", "")
+        if len(secret) < 32:
+            raise HTTPException(503, "The scheduled dispatcher requires a configured server-only secret.")
+        if not hmac.compare_digest(request.headers.get("authorization", ""), "Bearer " + secret):
+            raise HTTPException(403, "Scheduled dispatcher authorization required")
+        if request.app.state.job_mode != "durable":
+            raise HTTPException(409, "Durable dispatch requires shared PostgreSQL storage")
+        return await request.app.state.jobs.dispatch_pending(limit=20)
 
     @app.get("/api/auth/me")
     def me(request: Request):
@@ -520,11 +552,14 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
         if choices[payload.dataset_id].get("status") == "unavailable":
             raise HTTPException(422, "The verified dataset is unavailable. Select a labelled demo explicitly; no automatic fallback is allowed.")
         jobs = request.app.state.jobs
-        if not jobs.capacity.acquire(blocking=False):
+        durable = job_mode == "durable"
+        if not durable and not jobs.capacity.acquire(blocking=False):
             raise HTTPException(429, "The local queue is full (four jobs). Wait for a running job.")
         try:
             with db.connection() as conn:
                 conn.execute("BEGIN IMMEDIATE")
+                if durable and conn.execute("SELECT COUNT(*) FROM jobs WHERE status IN ('queued','running')").fetchone()[0] >= 4:
+                    raise HTTPException(429, "The shared backtest queue is full (four admitted jobs).")
                 strategy = _owned(conn, "strategies", payload.strategy_id, user["id"], active=True)
                 if payload.version_id:
                     version = conn.execute("SELECT * FROM strategy_versions WHERE id=? AND strategy_id=?", (payload.version_id, payload.strategy_id)).fetchone()
@@ -544,15 +579,25 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
                 job_id = identifier()
                 conn.execute("INSERT INTO jobs (id,owner_id,strategy_id,version_id,dataset_id,config_json,status,created_at) VALUES (?,?,?,?,?,?,?,?)", (job_id, user["id"], payload.strategy_id, vid, payload.dataset_id, encode(payload.config.model_dump(mode="json", exclude_none=True)), "queued", now()))
                 db.audit(conn, user["id"], "backtest.queued", job_id, {"version_id": vid, "dataset_id": payload.dataset_id})
+                if durable:
+                    jobs.enqueue(conn, "backtest", job_id, user["id"])
                 value = _job(_owned(conn, "jobs", job_id, user["id"]))
-            jobs.pool.submit(jobs.execute, job_id)
+            if durable:
+                jobs.dispatch_pending_sync(limit=1)
+            else:
+                jobs.pool.submit(jobs.execute, job_id)
             return value
         except BaseException:
-            jobs.capacity.release()
+            if not durable:
+                jobs.capacity.release()
             raise
 
     @app.get("/api/jobs/{jid}")
-    def job(jid: str, user=Depends(current_user)):
+    def job(jid: str, request: Request, user=Depends(current_user)):
+        with db.connection() as conn:
+            _owned(conn, "jobs", jid, user["id"])
+        if job_mode == "durable":
+            request.app.state.jobs.dispatch_pending_sync(limit=1)
         with db.connection() as conn:
             return _job(_owned(conn, "jobs", jid, user["id"]))
 

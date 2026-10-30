@@ -1,0 +1,35 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "runtime": "python",
+      "framework": "fastapi",
+      "entrypoint": "pyproject.toml",
+      "functions": {
+        "backend/app/main.py": { "maxDuration": 300 }
+      }
+    },
+    "frontend": {
+      "root": "frontend",
+      "framework": "vite",
+      "installCommand": "npm ci --ignore-scripts",
+      "buildCommand": "npm run build",
+      "outputDirectory": "dist",
+      "rewrites": [
+        {
+          "source": "/:page(auth|onboarding|dashboard|new|builder|backtests|analyst|ml|market|compare|intelligence|community|bots|integrations|settings)/:path*",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  },
+  "crons": [
+    { "path": "/api/internal/dispatch", "schedule": "0 0 * * *" }
+  ],
+  "rewrites": [
+    { "source": "/api", "destination": { "service": "app" } },
+    { "source": "/api/(.*)", "destination": { "service": "app" } },
+    { "source": "/(.*)", "destination": { "service": "frontend" } }
+  ]
+}

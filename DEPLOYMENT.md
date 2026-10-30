@@ -1,5 +1,7 @@
 # Local deployment and production path
 
+For the implemented two-service Vercel configuration, shared PostgreSQL adapter and durable queue worker, see [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md). The sections below describe SQLite/local mode unless explicitly noted; do not apply its single-process startup recovery to hosted mode.
+
 Run the checkout from any writable directory as the current ordinary Windows user. Follow README.md to install Python/Node and initialize the environment. No personal drive layout or original research checkout is required for the labelled demo workflow. The application does not stop or reconfigure unrelated processes.
 
 ## Start and verify locally
@@ -73,13 +75,13 @@ Requests are restricted to 200,000 actual streamed bytes, and strategy graphs to
 
 These are per-process engineering bounds, not a hosted-service resource policy. There is no deployment-wide storage accounting or durable distributed queue system. The optional AI adapter separately applies its configured local usage budgets, and the local ML subprocess has bounded time/resources. Neither replaces a hosted resource policy. Monitor the data directory's growth. A second API process must not be added as a substitute for a durable queue design.
 
-## Moving to PostgreSQL and durable workers
+## PostgreSQL hosting and further operational hardening
 
-A hosted version should move the **new platform's** data, never attach or migrate the existing trading/research databases. Preserve stable user/strategy/version/run/publication identifiers, canonical spec/config/result hashes, foreign-key relationships and replay provenance. Replace SQLite-specific SQL/triggers with explicit PostgreSQL migrations and equivalent immutable-record enforcement. JSON result records can initially map to JSONB; larger sealed artifacts can later move to versioned object storage with content hashes and ownership checks.
+The optional hosted implementation now uses a **new platform** PostgreSQL database and a transactional queue outbox. Never attach or migrate the existing trading/research databases. Preserve stable user/strategy/version/run/publication identifiers, canonical spec/config/result hashes, foreign-key relationships and replay provenance. Replace SQLite-specific SQL/triggers with explicit PostgreSQL migrations and equivalent immutable-record enforcement. JSON result records can initially map to JSONB; larger sealed artifacts can later move to versioned object storage with content hashes and ownership checks.
 
 Test the move on a consistent restored snapshot. Compare record counts and hashes, then exercise two-user ownership, CSRF/session expiry, version immutability, completed-job recovery, publication replay and public/private boundaries against the new backend. Verify all dates/numbers remain unchanged. Keep a rollback-ready untouched SQLite backup and avoid serving two writable databases as independent authorities.
 
-Before multiple API instances, introduce a durable task queue with database-backed admission, immutable job envelopes, per-user CPU/storage budgets, leases, bounded retries and idempotent result publication. Run CPU work in constrained worker processes or containers with real time/memory limits. Include engine version and dataset hash in the envelope, and separate worker credentials from the web service. Do not enable ML training or exchange execution merely by changing a worker flag.
+The hosted path implements database-backed admission, durable job references, fenced leases, bounded retries and idempotent result publication. Additional production policies for per-user CPU/storage quotas and retention remain operator responsibilities. Run CPU work in constrained worker processes or containers with real time/memory limits. Include engine version and dataset hash in the envelope, and separate worker credentials from the web service. Do not enable ML training or exchange execution merely by changing a worker flag.
 
 ## Public hosting prerequisites
 

@@ -251,6 +251,33 @@ class ResearchJobs:
             self.capacity.release()
 
 
+class HostedResearchJobs:
+    """Shared admission and outbox; the subscriber owns awaited execution."""
+    def __init__(self, db, durable):
+        self.db, self.durable = db, durable
+        self.runner = durable.runner
+        self.lifecycle_lock = durable.lifecycle_lock
+
+    def close(self):
+        pass
+
+    def submit(self, owner, kind, name, config):
+        jid = identifier()
+        with self.db.connection() as conn:
+            if conn.execute("SELECT COUNT(*) FROM research_jobs WHERE status IN ('queued','running')").fetchone()[0] >= 2:
+                raise HTTPException(429, "The shared research queue is full (two admitted jobs).")
+            if conn.execute("SELECT COUNT(*) FROM research_jobs WHERE owner_id=? AND status IN ('queued','running')", (owner,)).fetchone()[0] >= 1:
+                raise HTTPException(429, "Only one research task per owner may be queued or running.")
+            if conn.execute("SELECT COUNT(*) FROM research_jobs WHERE owner_id=?", (owner,)).fetchone()[0] >= 100:
+                raise HTTPException(429, "The owner research record limit is 100 experiments.")
+            conn.execute("INSERT INTO research_jobs (id,owner_id,kind,name,status,configuration_json,created_at) VALUES (?,?,?,?,?,?,?)", (jid, owner, kind, name, "queued", encode(config), now()))
+            self.durable.enqueue(conn, "research", jid, owner)
+            self.db.audit(conn, owner, "research.queued", jid, {"kind": kind, "configuration_sha256": sha256(encode(config).encode()).hexdigest()})
+            value = _job(_owned(conn, jid, owner))
+        self.durable.dispatch_pending_sync(limit=1)
+        return value
+
+
 def register_routes(app, db, helpers):
     router = APIRouter()
     strategy_owned, new_version, validate_spec, config_model = helpers
@@ -297,11 +324,16 @@ def register_routes(app, db, helpers):
             return [_job(row, False) for row in conn.execute("SELECT * FROM research_jobs WHERE owner_id=? AND kind='ml' ORDER BY created_at DESC LIMIT 100", (user["id"],))]
 
     @router.get("/api/ml/experiments/{jid}")
-    def experiment(jid: str, user=Depends(current_user)):
+    def experiment(jid: str, request: Request, user=Depends(current_user)):
         with db.connection() as conn:
             row = _owned(conn, jid, user["id"])
             if row["kind"] != "ml":
                 raise HTTPException(404, "ML experiment not found")
+        service = request.app.state.research_jobs
+        if isinstance(service, HostedResearchJobs):
+            service.durable.dispatch_pending_sync(limit=1)
+        with db.connection() as conn:
+            row = _owned(conn, jid, user["id"])
             return _job(row)
 
     @router.post("/api/ml/experiments/{jid}/cancel")
@@ -353,7 +385,12 @@ def register_routes(app, db, helpers):
         return request.app.state.research_jobs.submit(user["id"], "scenarios", "Fixed " + payload.scenario_kind, saved)
 
     @router.get("/api/research/jobs/{jid}")
-    def research_job(jid: str, user=Depends(current_user)):
+    def research_job(jid: str, request: Request, user=Depends(current_user)):
+        with db.connection() as conn:
+            _owned(conn, jid, user["id"])
+        service = request.app.state.research_jobs
+        if isinstance(service, HostedResearchJobs):
+            service.durable.dispatch_pending_sync(limit=1)
         with db.connection() as conn:
             return _job(_owned(conn, jid, user["id"]))
 

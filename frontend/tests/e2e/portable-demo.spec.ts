@@ -35,7 +35,7 @@ test("portable demo works without private historical archives", async ({ page })
   await expect(page.getByTestId("chart-dataset")).toHaveValue("demo_btc_4h");
   await expect(page.getByTestId("candlestick-chart")).toBeVisible();
   await expect(page.getByText("These are synthetic demonstration candles", { exact: false })).toBeVisible();
-  await expect(page.getByTestId("chart-dataset").locator('option[value="verified_btc_4h"]')).toBeDisabled();
+  await expect(page.getByTestId("chart-dataset").locator('option[value="verified_btc_4h"]')).toHaveJSProperty("disabled", true);
 
   await page.goto("/new");
   await page.getByTestId("create-blank").click();
@@ -45,7 +45,7 @@ test("portable demo works without private historical archives", async ({ page })
   await page.getByTestId("save-strategy").click();
   await page.getByTestId("run-backtest").click();
   await expect(page.getByTestId("dataset-select")).toHaveValue("demo_btc_4h");
-  await expect(page.getByTestId("dataset-select").locator('option[value="verified_btc_4h"]')).toBeDisabled();
+  await expect(page.getByTestId("dataset-select").locator('option[value="verified_btc_4h"]')).toHaveJSProperty("disabled", true);
   await expect(page.getByText("Synthetic demo selected", { exact: false })).toBeVisible();
   await expect(page.getByTestId("backtest-unavailable-data")).toBeVisible();
   await page.getByTestId("confirm-backtest").click();
@@ -59,7 +59,7 @@ test("portable demo works without private historical archives", async ({ page })
   await page.goto("/ml");
   await expect(page.getByTestId("ml-dataset")).toHaveValue("demo_btc_4h");
   await expect(page.getByText("Synthetic data: training and interface demonstration only", { exact: false })).toBeVisible();
-  await expect(page.getByTestId("ml-dataset").locator('option[value="verified_btc_4h"]')).toBeDisabled();
+  await expect(page.getByTestId("ml-dataset").locator('option[value="verified_btc_4h"]')).toHaveJSProperty("disabled", true);
   await page.getByTestId("ml-train").click();
   await expect(page.locator(".ml-job-head")).toContainText("succeeded", { timeout: 90_000 });
   await expect(page.locator(".ml-score-grid")).toContainText("brier");

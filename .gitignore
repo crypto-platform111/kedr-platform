@@ -22,6 +22,10 @@ secrets.*
 /.tmp/
 /.cache/
 /.vercel/
+/.neon
+/.agents/
+/.codex/
+/skills-lock.json
 /.vscode/
 /.idea/
 node_modules/

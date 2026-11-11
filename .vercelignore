@@ -1,6 +1,10 @@
 # Source-only uploads: never send installed user state or research payloads.
 .git
 .vercel
+.neon
+.agents
+.codex
+skills-lock.json
 .env
 .env.*
 !.env.example

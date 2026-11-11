@@ -11,6 +11,8 @@ from collections.abc import Mapping
 from contextlib import contextmanager
 import re
 import sqlite3
+import os
+import socket
 
 
 class CompatibleRow(Mapping):
@@ -104,7 +106,20 @@ def connect_postgres(database_url):
     except ImportError:
         raise RuntimeError("PostgreSQL requires the pinned psycopg dependency; install requirements.txt.") from None
     try:
-        raw = psycopg.connect(database_url, connect_timeout=10, row_factory=compatible_row)
+        options = {}
+        parameters = psycopg.conninfo.conninfo_to_dict(database_url)
+        host = parameters.get("host", "")
+        if os.name == "nt" and host.endswith(".neon.tech") and not parameters.get("hostaddr"):
+            # Some Windows networks advertise IPv6 DNS but cannot route IPv6.
+            # Resolve a current A record per connection rather than persisting
+            # an endpoint IP. Keep `host` in the original URL for TLS identity,
+            # channel binding and routing; neither SSL nor authentication changes.
+            try:
+                options["hostaddr"] = socket.gethostbyname(host)
+            except socket.gaierror:
+                # Preserve libpq's normal path if this endpoint is IPv6-only.
+                pass
+        raw = psycopg.connect(database_url, connect_timeout=10, row_factory=compatible_row, **options)
         raw.isolation_level = psycopg.IsolationLevel.READ_COMMITTED
     except psycopg.Error:
         # libpq diagnostics may contain host names, user names or DSN fragments.
@@ -123,11 +138,17 @@ class PostgresConnection:
             return EmptyCursor()
         import psycopg
         try:
+            translated = translate_sql(sql, parameterized=parameters is not None)
+            if re.match(r"\ASELECT\b", sql.lstrip(), re.IGNORECASE):
+                # The application's fixed SELECT statements only read data.
+                # They need no integrity-error recovery savepoint; failures
+                # still propagate and roll back the enclosing transaction.
+                return self.raw.execute(translated, parameters)
             # SQLite integrity errors abort a statement, not the surrounding
             # transaction. A savepoint retains that contract for callers which
             # deliberately catch sqlite3.IntegrityError inside a context.
             with self.raw.transaction():
-                return self.raw.execute(translate_sql(sql, parameterized=parameters is not None), parameters)
+                return self.raw.execute(translated, parameters)
         except psycopg.IntegrityError as exc:
             immutable = "immutable" in (exc.diag.message_primary or "").lower()
             message = "immutable database record" if immutable else {

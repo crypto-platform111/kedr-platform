@@ -1,9 +1,13 @@
 import { defineConfig } from "@playwright/test";
 
+const networkTimeout = Number(process.env.KEDR_E2E_NETWORK_TIMEOUT_MS || 15_000);
+if (!Number.isInteger(networkTimeout) || networkTimeout < 1_000 || networkTimeout > 120_000)
+  throw new Error("KEDR_E2E_NETWORK_TIMEOUT_MS must be between 1000 and 120000");
+
 export default defineConfig({
   testDir: "./tests/e2e",
-  timeout: 120_000,
-  expect: { timeout: 15_000 },
+  timeout: process.env.KEDR_E2E_NETWORK_TIMEOUT_MS ? 300_000 : 120_000,
+  expect: { timeout: networkTimeout },
   fullyParallel: false,
   workers: 1,
   reporter: [
@@ -19,6 +23,6 @@ export default defineConfig({
     viewport: { width: 1440, height: 1000 },
     screenshot: "only-on-failure",
     trace: "off",
-    actionTimeout: 15_000,
+    actionTimeout: networkTimeout,
   },
 });

@@ -6,6 +6,8 @@ The application runs locally without exchange credentials, paid services or new 
 
 Vercel Services uses the confirmed two-service layout, optional shared PostgreSQL storage and durable Vercel Queues. See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) for cloud resource setup, plan requirements, recovery limits and verification. Local SQLite remains the default; no cloud deployment or personal-data migration is implied.
 
+For the configured Neon PostgreSQL project, root-level build, migrations and local hosted-mode startup, see [NEON_SETUP.md](NEON_SETUP.md). `npm run build` builds the frontend; `npm run db:migrate:neon` uses Neon's direct URL and `npm run dev:neon` starts the API, frontend and private queue worker with its pooled URL.
+
 ## Windows setup for a fresh clone
 
 Install Git for Windows, **Python 3.13** with the Windows `py` launcher, and **Node.js 24 LTS** with npm. Open a new PowerShell window and check `py -3.13 --version`, `node --version` and `npm.cmd --version`. Microsoft Edge is needed only for optional browser tests. The repository is public; an organization administrator must grant write access before a collaborator can push directly.

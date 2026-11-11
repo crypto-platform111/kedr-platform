@@ -52,9 +52,11 @@ class Database:
                 # The application previously relied on SQLite's single-writer
                 # BEGIN IMMEDIATE semantics for quotas, versions and admission.
                 # Acquire before reads too, so every context sees committed state.
-                raw.execute("SET LOCAL lock_timeout = '15s'")
-                raw.execute("SET LOCAL statement_timeout = '30s'")
-                raw.execute("SELECT pg_advisory_xact_lock(1262830674, 1)")
+                # One ordered simple-query message preserves all protections
+                # without three WAN round trips for each short transaction.
+                raw.execute("SET LOCAL lock_timeout = '15s'; "
+                            "SET LOCAL statement_timeout = '30s'; "
+                            "SELECT pg_advisory_xact_lock(1262830674, 1)", prepare=False)
                 yield PostgresConnection(raw)
             return
         conn = sqlite3.connect(str(self.path), timeout=15)
